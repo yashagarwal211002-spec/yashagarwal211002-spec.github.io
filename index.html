@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cash Book">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<title>Cash Book</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: single phone column — day summary slab, add form, entry list; tabs for Day / Report / Setup */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --line:#dde3e0; --fg:#17201c; --muted:#5f6b66;
+  --accent:#1f6f5c; --accent-ink:#ffffff; --in:#1d7a46; --out:#c0392b; --half:#b0701a; --chip:#e8efec;
+  --sans:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121715; --surface:#1b2220; --line:#2b3532; --fg:#e7eeeb; --muted:#93a19b;
+  --accent:#4fb89a; --accent-ink:#0c1512; --in:#5fcf8c; --out:#f07b6c; --half:#e3b04b; --chip:#24302c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121715; --surface:#1b2220; --line:#2b3532; --fg:#e7eeeb; --muted:#93a19b;
+  --accent:#4fb89a; --accent-ink:#0c1512; --in:#5fcf8c; --out:#f07b6c; --half:#e3b04b; --chip:#24302c; color-scheme:dark}
+html,body{background:var(--bg)}
+body{color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+h1{font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em}
+.tabs{display:flex;background:var(--chip);border-radius:10px;padding:3px;gap:2px}
+.tabs button{flex:1;border:0;background:none;font:600 13.5px var(--sans);color:var(--muted);padding:8px 4px;border-radius:8px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.daybar{display:flex;align-items:center;gap:8px}
+.daybar .arrow{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:18px;cursor:pointer}
+.daybar .mid{flex:1;text-align:center;position:relative}
+.daybar .d1{font-weight:700;font-size:17px}
+.daybar .d2{font-size:13px;color:var(--muted)}
+.daybar input[type=date]{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
+.slab{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.slab .rows{display:grid;grid-template-columns:1fr auto;padding:14px 16px 10px;row-gap:6px}
+.slab .lbl{color:var(--muted);font-size:14px}
+.slab .v{text-align:right;font-size:15px}
+.slab .in{color:var(--in)} .slab .out{color:var(--out)}
+.closing{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px 14px;border-top:1px dashed var(--line)}
+.closing .lbl{font-weight:600;color:var(--fg);font-size:15px}
+.closing .v{font-size:26px;font-weight:600}
+.neg{color:var(--out)!important}
+.add{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--bg);color:var(--muted);font:600 15px var(--sans);padding:10px;border-radius:10px;cursor:pointer}
+.seg button.on.in{background:var(--in);border-color:var(--in);color:var(--accent-ink)}
+.seg button.on.out{background:var(--out);border-color:var(--out);color:var(--accent-ink)}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+input,select{font:16px var(--sans);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;box-sizing:border-box;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;background:var(--accent);color:var(--accent-ink);font:700 16px var(--sans);padding:13px;border-radius:10px;cursor:pointer}
+.btn.ghost{background:none;color:var(--muted);border:1px solid var(--line);font-weight:600}
+.actions{display:flex;gap:8px}.actions .btn{flex:1}
+.list{display:flex;flex-direction:column}
+.sec{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:4px 2px 6px}
+.item{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;text-align:left;color:var(--fg);font:inherit;width:100%}
+.item .t{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.item .c{font-size:13px;color:var(--muted)}
+.item .a{grid-row:span 2;align-self:center;font-size:16px}
+.empty{color:var(--muted);text-align:center;padding:22px 8px;font-size:15px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;text-align:right;padding:8px 6px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+tfoot td{font-weight:700;border-bottom:0;border-top:2px solid var(--line)}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 8px}
+.rowbtn{cursor:pointer}
+.note{font-size:13px;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;z-index:20}
+.banner{background:var(--chip);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--muted)}
+.danger{color:var(--out);border-color:var(--out)}
+.seg button.on.nt{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.att-sum{display:flex;flex-wrap:wrap;gap:6px}
+.pill{background:var(--chip);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;color:var(--muted)}
+.pill b{color:var(--fg);font-family:var(--mono)}
+.staff{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.staff-top{display:flex;align-items:center;gap:10px}
+.staff-name{flex:1;min-width:0;font-weight:600;font-size:16px;overflow-wrap:anywhere}
+.mk{display:grid;grid-template-columns:repeat(3,52px);gap:6px}
+.mk button{height:42px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font:700 14px var(--sans);cursor:pointer}
+.mk button.on.P{background:var(--in);border-color:var(--in);color:var(--accent-ink)}
+.mk button.on.H{background:var(--half);border-color:var(--half);color:var(--accent-ink)}
+.mk button.on.A{background:var(--out);border-color:var(--out);color:var(--accent-ink)}
+.staff input{padding:8px 10px;font-size:15px}
+.srow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.srow .nm{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.srow .x{border:1px solid var(--line);background:none;color:var(--out);border-radius:8px;padding:6px 10px;font:600 13px var(--sans);cursor:pointer}
+tr.sel td{background:var(--chip)}
+.st-P{color:var(--in)} .st-H{color:var(--half)} .st-A{color:var(--out)}
+.drow{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.drow .n{grid-column:2;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.linkbtn{background:none;border:0;color:var(--accent);font:600 15px var(--sans);cursor:pointer;padding:6px}
+@media (prefers-reduced-motion:no-preference){.tabs button,.seg button{transition:background .15s,color .15s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Daily Cash Book</h1>
+  </header>
+  <div class="tabs" role="tablist">
+    <button id="tab-day" role="tab" aria-selected="true" data-v="day">Day</button>
+    <button id="tab-att" role="tab" aria-selected="false" data-v="att">Attendance</button>
+    <button id="tab-report" role="tab" aria-selected="false" data-v="report">Report</button>
+    <button id="tab-setup" role="tab" aria-selected="false" data-v="setup">Setup</button>
+  </div>
+  <div id="banner" class="banner" hidden></div>
+
+  <!-- DAY -->
+  <section id="v-day" style="display:flex;flex-direction:column;gap:14px">
+    <div class="daybar">
+      <button class="arrow" id="prev" aria-label="Previous day">‹</button>
+      <div class="mid">
+        <div class="d1" id="d1">—</div><div class="d2" id="d2">Tap to pick a date</div>
+        <input type="date" id="pick" aria-label="Pick date">
+      </div>
+      <button class="arrow" id="next" aria-label="Next day">›</button>
+    </div>
+
+    <div class="slab">
+      <div class="rows">
+        <div class="lbl">Opening balance</div><div class="v num" id="s-open">₹0</div>
+        <div class="lbl">Income</div><div class="v num in" id="s-in">+ ₹0</div>
+        <div class="lbl">Expense</div><div class="v num out" id="s-out">− ₹0</div>
+      </div>
+      <div class="closing"><div class="lbl">Closing balance</div><div class="v num" id="s-close">₹0</div></div>
+    </div>
+
+    <form class="add" id="form" autocomplete="off">
+      <div class="seg">
+        <button type="button" id="t-out" class="out on">Expense</button>
+        <button type="button" id="t-in" class="in">Income</button>
+      </div>
+      <div class="two">
+        <div class="field"><label for="f-amt">Amount (₹)</label><input id="f-amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" required></div>
+        <div class="field"><label for="f-cat">Category</label><select id="f-cat"></select></div>
+      </div>
+      <div class="field"><label for="f-desc">Description</label><input id="f-desc" type="text" placeholder="e.g. Gas, Trolley, Coin" maxlength="80"></div>
+      <div class="actions">
+        <button type="button" class="btn ghost" id="f-cancel" hidden>Cancel</button>
+        <button type="button" class="btn ghost danger" id="f-del" hidden>Delete</button>
+        <button type="submit" class="btn" id="f-save">Add entry</button>
+      </div>
+    </form>
+
+    <div>
+      <div class="sec" id="list-h">Entries</div>
+      <div class="list" id="list"></div>
+    </div>
+  </section>
+
+  <!-- ATTENDANCE -->
+  <section id="v-att" hidden style="flex-direction:column;gap:14px">
+    <div class="daybar">
+      <button class="arrow" id="a-prev" aria-label="Previous day">‹</button>
+      <div class="mid">
+        <div class="d1" id="a-d1">—</div><div class="d2" id="a-d2">Tap to pick a date</div>
+        <input type="date" id="a-pick" aria-label="Pick date">
+      </div>
+      <button class="arrow" id="a-next" aria-label="Next day">›</button>
+    </div>
+    <div class="att-sum" id="a-sum"></div>
+    <div id="a-list" style="display:flex;flex-direction:column;gap:10px"></div>
+
+    <div class="sec" style="margin-top:10px">Attendance summary</div>
+    <div class="two">
+      <div class="field"><label for="a-from">From</label><input id="a-from" type="date"></div>
+      <div class="field"><label for="a-to">Till</label><input id="a-to" type="date"></div>
+    </div>
+    <div class="actions"><button type="button" class="btn ghost" id="a-thism">This month</button><button type="button" class="btn ghost" id="a-dl">Download CSV</button></div>
+    <div class="scroll">
+      <table><thead id="a-mhead"></thead><tbody id="a-mbody"></tbody></table>
+    </div>
+    <div class="note" id="a-mnote">Half day counts as 0.5. Tap a name to see each day.</div>
+    <div id="a-detail"></div>
+  </section>
+
+  <!-- REPORT -->
+  <section id="v-report" hidden style="flex-direction:column;gap:12px">
+    <div class="seg">
+      <button type="button" id="rm-daily" class="nt on">Daily</button>
+      <button type="button" id="rm-ledger" class="nt">Ledger</button>
+    </div>
+    <div id="r-ledger" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="two">
+        <div class="field"><label for="l-from">From</label><input id="l-from" type="date"></div>
+        <div class="field"><label for="l-to">Till</label><input id="l-to" type="date"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label for="l-cat">Ledger</label><select id="l-cat"></select></div>
+        <div class="field"><label for="l-q">Search</label><input id="l-q" type="search" placeholder="e.g. Chacha, Gas"></div>
+      </div>
+      <div class="actions"><button type="button" class="btn ghost" id="l-thism">This month</button><button type="button" class="btn ghost" id="l-dl">Download CSV</button></div>
+      <div class="scroll">
+        <table><thead id="l-head"></thead><tbody id="l-body"></tbody><tfoot id="l-foot"></tfoot></table>
+      </div>
+      <div class="note" id="l-note"></div>
+    </div>
+    <div id="r-daily" style="display:flex;flex-direction:column;gap:12px">
+    <div class="two">
+      <div class="field"><label for="r-month">Month</label><input id="r-month" type="month"></div>
+      <div class="field" style="justify-content:flex-end"><button type="button" class="btn ghost" id="r-dl">Download CSV</button></div>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Date</th><th>Opening</th><th>Income</th><th>Expense</th><th>Closing</th></tr></thead>
+        <tbody id="r-body"></tbody>
+        <tfoot id="r-foot"></tfoot>
+      </table>
+    </div>
+    <div class="note">Only days with entries are listed. Tap a row to open that day.</div>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section id="v-setup" hidden style="flex-direction:column;gap:12px">
+    <form class="add" id="setup">
+      <div class="field"><label for="c-start">Starting cash balance (₹)</label><input id="c-start" type="number" inputmode="decimal" step="0.01" placeholder="0"></div>
+      <div class="note">The cash you had before your first entry. All openings and closings build on this.</div>
+      <div class="field"><label for="c-cats">Categories (comma separated)</label><input id="c-cats" type="text" placeholder="Factory, Home, Other"></div>
+      <button type="submit" class="btn">Save setup</button>
+    </form>
+    <div class="add">
+      <div class="sec" style="margin:0">Staff</div>
+      <div id="staff-list"></div>
+      <form id="staff-form" autocomplete="off" style="display:flex;flex-direction:column;gap:10px">
+        <div class="two">
+          <div class="field"><label for="s-name">Name</label><input id="s-name" type="text" maxlength="40" placeholder="e.g. Ramesh"></div>
+          <div class="field"><label for="s-wage">Daily wage ₹</label><input id="s-wage" type="number" inputmode="decimal" min="0" step="1" placeholder="Optional"></div>
+        </div>
+        <button type="submit" class="btn">Add staff</button>
+      </form>
+    </div>
+    <div class="add">
+      <div class="sec" style="margin:0">Backup</div>
+      <div class="note">Your data is saved on this phone only. Save a backup every week, and before clearing Safari or changing phones.</div>
+      <button type="button" class="btn" id="b-save">Save backup</button>
+      <div class="field"><label for="b-file">Restore from backup file</label><input id="b-file" type="file" accept=".json,application/json"></div>
+      <div class="note" id="b-info"></div>
+      <button type="button" class="btn ghost danger" id="b-restore" hidden>Replace all data with this backup</button>
+    </div>
+  </section>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const DEF_CATS = ["Factory","Home","Other"];
+  const state = { days:{}, cfg:{start:0, cats:DEF_CATS.slice()}, date:todayStr(), type:"out", editId:null, view:"day", db:null, att:{}, staff:[], attSel:null };
+  const ST = {P:"Present",H:"Half day",A:"Absent"};
+  const queues = {};
+
+  function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function shift(ds,n){const [y,m,d]=ds.split("-").map(Number);const t=new Date(y,m-1,d+n);return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");}
+  const fmt = n => { const s=Math.abs(n).toLocaleString("en-IN",{minimumFractionDigits:0,maximumFractionDigits:2}); return (n<0?"−":"")+"₹"+s; };
+  const round = n => Math.round(n*100)/100;
+  function dayTotals(ds){ let i=0,o=0; for(const e of (state.days[ds]||[])){ if(e.type==="in") i+=e.amt; else o+=e.amt; } return {i:round(i),o:round(o)}; }
+  function openingFor(ds){ let b=Number(state.cfg.start)||0; for(const k in state.days){ if(k<ds){ const t=dayTotals(k); b+=t.i-t.o; } } return round(b); }
+  function toast(msg){ const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,1800); }
+
+  async function saveFile(name,text){
+    const type=name.endsWith(".json")?"application/json":"text/csv";
+    const file=new File([text],name,{type});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return; }
+    const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+  }
+  // ---- Views
+  document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.v)));
+  function setView(v){
+    state.view=v;
+    document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));
+    for(const k of ["day","att","report","setup"]){ const s=$("v-"+k); s.hidden = k!==v; if(k===v) s.style.display="flex"; }
+    render();
+  }
+
+  // ---- Day view
+  $("prev").onclick=()=>{state.date=shift(state.date,-1);resetForm();render();};
+  $("next").onclick=()=>{state.date=shift(state.date,1);resetForm();render();};
+  $("pick").addEventListener("change",e=>{ if(e.target.value){state.date=e.target.value;resetForm();render();} });
+  $("t-out").onclick=()=>setType("out"); $("t-in").onclick=()=>setType("in");
+  function setType(t){ state.type=t; $("t-out").classList.toggle("on",t==="out"); $("t-in").classList.toggle("on",t==="in"); }
+
+  function renderCats(){
+    const sel=$("f-cat"), cur=sel.value; sel.innerHTML="";
+    for(const c of state.cfg.cats){ const o=document.createElement("option"); o.value=c; o.textContent=c; sel.appendChild(o); }
+    if(state.cfg.cats.includes(cur)) sel.value=cur;
+  }
+
+  function renderDay(){
+    const [y,m,d]=state.date.split("-").map(Number); const dt=new Date(y,m-1,d);
+    const isToday = state.date===todayStr();
+    $("d1").textContent = dt.toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});
+    $("d2").textContent = (isToday?"Today · ":"") + dt.toLocaleDateString("en-IN",{weekday:"long"});
+    $("pick").value=state.date;
+    const op=openingFor(state.date), t=dayTotals(state.date), cl=round(op+t.i-t.o);
+    $("s-open").textContent=fmt(op); $("s-open").classList.toggle("neg",op<0);
+    $("s-in").textContent="+ "+fmt(t.i); $("s-out").textContent="− "+fmt(t.o);
+    $("s-close").textContent=fmt(cl); $("s-close").classList.toggle("neg",cl<0);
+    const list=$("list"); list.innerHTML="";
+    const items=(state.days[state.date]||[]).slice().sort((a,b)=>(a.t||0)-(b.t||0));
+    $("list-h").textContent = items.length ? `Entries (${items.length}) · tap to edit` : "Entries";
+    if(!items.length){ const e=document.createElement("div"); e.className="empty"; e.textContent="No entries for this day yet. Add one above."; list.appendChild(e); return; }
+    for(const it of items){
+      const b=document.createElement("button"); b.type="button"; b.className="item";
+      const t1=document.createElement("div"); t1.className="t"; t1.textContent=it.desc||(it.type==="in"?"Income":"Expense");
+      const a=document.createElement("div"); a.className="a num"; a.style.color=it.type==="in"?"var(--in)":"var(--out)"; a.textContent=(it.type==="in"?"+ ":"− ")+fmt(it.amt);
+      const c=document.createElement("div"); c.className="c"; c.textContent=it.cat||"";
+      b.append(t1,a,c); b.onclick=()=>editEntry(it); list.appendChild(b);
+    }
+  }
+
+  function editEntry(it){
+    state.editId=it.id; setType(it.type);
+    $("f-amt").value=it.amt; $("f-desc").value=it.desc||"";
+    if(it.cat && !state.cfg.cats.includes(it.cat)){ state.cfg.cats.push(it.cat); renderCats(); }
+    $("f-cat").value=it.cat||state.cfg.cats[0];
+    $("f-save").textContent="Save changes"; $("f-cancel").hidden=false; $("f-del").hidden=false; $("f-del").textContent="Delete"; $("f-del").dataset.armed="";
+    $("form").scrollIntoView({behavior:"smooth",block:"center"}); $("f-amt").focus();
+  }
+  function resetForm(){
+    state.editId=null; $("f-amt").value=""; $("f-desc").value="";
+    $("f-save").textContent="Add entry"; $("f-cancel").hidden=true; $("f-del").hidden=true;
+  }
+  $("f-cancel").onclick=resetForm;
+  $("f-del").onclick=()=>{
+    const b=$("f-del");
+    if(!b.dataset.armed){ b.dataset.armed="1"; b.textContent="Tap again to delete"; return; }
+    const arr=(state.days[state.date]||[]).filter(e=>e.id!==state.editId);
+    saveDay(state.date,arr); resetForm(); render(); toast("Entry deleted");
+  };
+  $("form").addEventListener("submit",e=>{
+    e.preventDefault();
+    const amt=round(parseFloat($("f-amt").value));
+    if(!(amt>0)){ $("f-amt").focus(); toast("Enter an amount above 0"); return; }
+    const entry={ id: state.editId || (Date.now().toString(36)+Math.random().toString(36).slice(2,6)), type:state.type, amt, desc:$("f-desc").value.trim(), cat:$("f-cat").value, t: Date.now() };
+    let arr=(state.days[state.date]||[]).slice();
+    if(state.editId){ const i=arr.findIndex(x=>x.id===state.editId); if(i>=0){ entry.t=arr[i].t; arr[i]=entry; } }
+    else arr.push(entry);
+    const wasEdit=!!state.editId;
+    saveDay(state.date,arr); resetForm(); render(); toast(wasEdit?"Entry updated":"Entry added");
+    $("f-amt").focus();
+  });
+
+  // ---- Report
+  $("r-month").addEventListener("change",render);
+  function reportRows(){
+    const mo=$("r-month").value || state.date.slice(0,7);
+    const keys=Object.keys(state.days).filter(k=>k.startsWith(mo) && (state.days[k]||[]).length).sort();
+    let ti=0,to=0;
+    const rows=keys.map(k=>{ const op=openingFor(k), t=dayTotals(k); ti+=t.i; to+=t.o; return {k,op,i:t.i,o:t.o,cl:round(op+t.i-t.o)}; });
+    return {mo,rows,ti:round(ti),to:round(to)};
+  }
+  function renderReport(){
+    $("rm-daily").classList.toggle("on",state.rMode!=="ledger"); $("rm-ledger").classList.toggle("on",state.rMode==="ledger");
+    $("r-daily").hidden = state.rMode==="ledger"; $("r-ledger").hidden = state.rMode!=="ledger";
+    if(state.rMode==="ledger"){ renderLedger(); return; }
+    if(!$("r-month").value) $("r-month").value=state.date.slice(0,7);
+    const {rows,ti,to}=reportRows(); const body=$("r-body"), foot=$("r-foot"); body.innerHTML=""; foot.innerHTML="";
+    if(!rows.length){ body.innerHTML='<tr><td colspan="5" class="empty" style="text-align:center">No entries this month.</td></tr>'; return; }
+    for(const r of rows){
+      const [y,m,d]=r.k.split("-").map(Number); const lab=new Date(y,m-1,d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",weekday:"short"});
+      const tr=document.createElement("tr"); tr.className="rowbtn";
+      tr.innerHTML=`<td>${lab}</td><td class="num">${fmt(r.op)}</td><td class="num" style="color:var(--in)">${fmt(r.i)}</td><td class="num" style="color:var(--out)">${fmt(r.o)}</td><td class="num" style="font-weight:600">${fmt(r.cl)}</td>`;
+      tr.onclick=()=>{ state.date=r.k; resetForm(); setView("day"); };
+      body.appendChild(tr);
+    }
+    const first=rows[0], last=rows[rows.length-1];
+    foot.innerHTML=`<tr><td>Month</td><td class="num">${fmt(first.op)}</td><td class="num" style="color:var(--in)">${fmt(ti)}</td><td class="num" style="color:var(--out)">${fmt(to)}</td><td class="num">${fmt(last.cl)}</td></tr>`;
+  }
+  $("r-dl").onclick=async()=>{
+    const {mo,rows,ti,to}=reportRows();
+    if(!rows.length){ toast("Nothing to download for this month"); return; }
+    let csv="Date,Opening,Income,Expense,Closing\n"+rows.map(r=>[r.k,r.op,r.i,r.o,r.cl].join(",")).join("\n");
+    csv+=`\nTotal,${rows[0].op},${ti},${to},${rows[rows.length-1].cl}\n\nDate,Type,Category,Description,Amount\n`;
+    for(const r of rows) for(const e of state.days[r.k]) csv+=[r.k,e.type==="in"?"Income":"Expense",e.cat,'"'+(e.desc||"").replace(/"/g,'""')+'"',e.amt].join(",")+"\n";
+    try{ await saveFile(`cashbook-${mo}.csv`,csv); }
+    catch(err){ toast("Download cancelled"); }
+  };
+
+  // ---- Ledger
+  state.rMode="daily"; state.ledSel="";
+  $("rm-daily").onclick=()=>{state.rMode="daily";render();};
+  $("rm-ledger").onclick=()=>{state.rMode="ledger";render();};
+  for(const id of ["l-from","l-to"]) $(id).addEventListener("change",render);
+  $("l-cat").addEventListener("change",()=>{state.ledSel=$("l-cat").value;render();});
+  $("l-q").addEventListener("input",render);
+  $("l-thism").onclick=()=>{ const r=monthRange(todayStr()); $("l-from").value=r[0]; $("l-to").value=r[1]; render(); };
+  const dLabel=k=>{ const [y,m,d]=k.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString("en-IN",{day:"2-digit",month:"short"}); };
+  function cell(tag,text,cls,style){ const c=document.createElement(tag); c.textContent=text; if(cls) c.className=cls; if(style) c.style.cssText=style; return c; }
+
+  function ledgerData(){
+    let f=$("l-from").value, t=$("l-to").value;
+    if(!f||!t){ const r=monthRange(state.date); f=f||r[0]; t=t||r[1]; }
+    if(f>t){ const x=f; f=t; t=x; }
+    const q=$("l-q").value.trim().toLowerCase();
+    const rows=[];
+    for(const k of Object.keys(state.days).filter(k=>k>=f&&k<=t).sort()){
+      for(const e of state.days[k].slice().sort((a,b)=>(a.t||0)-(b.t||0))){
+        if(q && !((e.desc||"")+" "+(e.cat||"")).toLowerCase().includes(q)) continue;
+        rows.push(Object.assign({k},e));
+      }
+    }
+    return {f,t,q,rows};
+  }
+
+  function renderLedger(){
+    if(!$("l-from").value||!$("l-to").value){ const r=monthRange(state.date); $("l-from").value=$("l-from").value||r[0]; $("l-to").value=$("l-to").value||r[1]; }
+    const {rows,q}=ledgerData();
+    const all=[]; for(const k in state.days) for(const e of state.days[k]) if(e.cat) all.push(e.cat);
+    const cats=[...new Set(state.cfg.cats.concat(all))];
+    if(state.ledSel && !cats.includes(state.ledSel)) state.ledSel="";
+    const sel=$("l-cat"); sel.innerHTML="";
+    sel.appendChild(cell("option","All ledgers")).value="";
+    for(const c of cats){ const o=cell("option",c); o.value=c; sel.appendChild(o); }
+    sel.value=state.ledSel;
+    const head=$("l-head"), body=$("l-body"), foot=$("l-foot"), note=$("l-note");
+    head.innerHTML=""; body.innerHTML=""; foot.innerHTML=""; note.innerHTML="";
+
+    if(!state.ledSel){
+      head.innerHTML="<tr><th>Ledger</th><th>Income</th><th>Expense</th><th>Net</th></tr>";
+      const g={}; for(const r of rows){ const c=r.cat||"Other"; g[c]=g[c]||{i:0,o:0,n:0}; if(r.type==="in") g[c].i+=r.amt; else g[c].o+=r.amt; g[c].n++; }
+      const keys=Object.keys(g).sort((a,b)=>(g[b].i+g[b].o)-(g[a].i+g[a].o));
+      if(!keys.length){ body.innerHTML='<tr><td colspan="4" class="empty" style="text-align:center">No entries in this period.</td></tr>'; return; }
+      let ti=0,to=0;
+      for(const c of keys){
+        const v=g[c]; ti+=v.i; to+=v.o; const net=round(v.i-v.o);
+        const tr=document.createElement("tr"); tr.className="rowbtn";
+        tr.append(cell("td",`${c} (${v.n})`), cell("td",fmt(round(v.i)),"num","color:var(--in)"), cell("td",fmt(round(v.o)),"num","color:var(--out)"), cell("td",fmt(net),"num"+(net<0?" neg":""),"font-weight:600"));
+        tr.onclick=()=>{ state.ledSel=c; render(); };
+        body.appendChild(tr);
+      }
+      const tr=document.createElement("tr"); const net=round(ti-to);
+      tr.append(cell("td","Total"), cell("td",fmt(round(ti)),"num","color:var(--in)"), cell("td",fmt(round(to)),"num","color:var(--out)"), cell("td",fmt(net),"num"+(net<0?" neg":"")));
+      foot.appendChild(tr);
+      note.textContent = q ? `Showing entries matching "${$("l-q").value.trim()}". Tap a ledger to see its entries.` : "Tap a ledger to see its entries.";
+      return;
+    }
+
+    head.innerHTML="<tr><th>Date</th><th>Description</th><th>Amount</th><th>Running</th></tr>";
+    const list=rows.filter(r=>r.cat===state.ledSel);
+    if(!list.length){ body.innerHTML='<tr><td colspan="4" class="empty" style="text-align:center">No entries in this ledger for this period.</td></tr>'; }
+    let run=0, ti=0, to=0;
+    for(const r of list){
+      if(r.type==="in"){ run+=r.amt; ti+=r.amt; } else { run-=r.amt; to+=r.amt; }
+      run=round(run);
+      const tr=document.createElement("tr"); tr.className="rowbtn";
+      const dsc=cell("td",r.desc||(r.type==="in"?"Income":"Expense")); dsc.style.cssText="text-align:left;white-space:normal;min-width:110px";
+      tr.append(cell("td",dLabel(r.k)), dsc, cell("td",(r.type==="in"?"+ ":"− ")+fmt(r.amt),"num",r.type==="in"?"color:var(--in)":"color:var(--out)"), cell("td",fmt(run),"num"+(run<0?" neg":"")));
+      tr.onclick=()=>{ state.date=r.k; resetForm(); setView("day"); };
+      body.appendChild(tr);
+    }
+    if(list.length){
+      const tr=document.createElement("tr");
+      const lab=cell("td",`In ${fmt(round(ti))} · Out ${fmt(round(to))}`); lab.colSpan=3; lab.style.textAlign="left";
+      tr.append(lab, cell("td",fmt(run),"num"+(run<0?" neg":"")));
+      foot.appendChild(tr);
+    }
+    note.append("Tap an entry to open that day. ");
+    const back=cell("button","← All ledgers","linkbtn"); back.type="button"; back.style.padding="0";
+    back.onclick=()=>{ state.ledSel=""; render(); };
+    note.appendChild(back);
+  }
+
+  $("l-dl").onclick=async()=>{
+    const {f,t,rows}=ledgerData();
+    const list = state.ledSel ? rows.filter(r=>r.cat===state.ledSel) : rows;
+    if(!list.length){ toast("Nothing to download for this period"); return; }
+    const qq=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+    let csv="Date,Ledger,Description,Type,Amount\n";
+    for(const r of list) csv+=[r.k,qq(r.cat),qq(r.desc),r.type==="in"?"Income":"Expense",r.amt].join(",")+"\n";
+    const name=(state.ledSel||"all").replace(/[^A-Za-z0-9_-]+/g,"-");
+    try{ await saveFile(`ledger-${name}-${f}-to-${t}.csv`,csv); }
+    catch(err){ toast("Download cancelled"); }
+  };
+
+  // ---- Attendance
+  $("a-prev").onclick=()=>{state.date=shift(state.date,-1);render();};
+  $("a-next").onclick=()=>{state.date=shift(state.date,1);render();};
+  $("a-pick").addEventListener("change",e=>{ if(e.target.value){state.date=e.target.value;render();} });
+  function monthRange(ds){ const [y,m]=ds.split("-").map(Number); const last=new Date(y,m,0).getDate(); const mo=ds.slice(0,7); return [mo+"-01", mo+"-"+String(last).padStart(2,"0")]; }
+  for(const id of ["a-from","a-to"]) $(id).addEventListener("change",()=>{state.attSel=null;renderAttMonth();});
+  $("a-thism").onclick=()=>{ const r=monthRange(todayStr()); $("a-from").value=r[0]; $("a-to").value=r[1]; state.attSel=null; renderAttMonth(); };
+
+  function setMark(sid,s){
+    const day=Object.assign({},state.att[state.date]||{}); const cur=day[sid]||{};
+    const rec={s: cur.s===s ? "" : s, n: cur.n||""};
+    if(!rec.s && !rec.n) delete day[sid]; else day[sid]=rec;
+    saveAtt(state.date,day); render();
+  }
+  function setNote(sid,n){
+    const day=Object.assign({},state.att[state.date]||{}); const cur=day[sid]||{};
+    if((cur.n||"")===n) return;
+    const rec={s:cur.s||"", n};
+    if(!rec.s && !rec.n) delete day[sid]; else day[sid]=rec;
+    saveAtt(state.date,day); toast("Note saved");
+  }
+
+  function renderAtt(){
+    const [y,m,d]=state.date.split("-").map(Number); const dt=new Date(y,m-1,d);
+    $("a-d1").textContent=dt.toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});
+    $("a-d2").textContent=(state.date===todayStr()?"Today · ":"")+dt.toLocaleDateString("en-IN",{weekday:"long"});
+    $("a-pick").value=state.date;
+    const day=state.att[state.date]||{};
+    let c={P:0,H:0,A:0,N:0};
+    for(const s of state.staff){ const k=(day[s.id]||{}).s; if(k) c[k]++; else c.N++; }
+    $("a-sum").innerHTML=`<span class="pill">Present <b>${c.P}</b></span><span class="pill">Half day <b>${c.H}</b></span><span class="pill">Absent <b>${c.A}</b></span><span class="pill">Not marked <b>${c.N}</b></span>`;
+
+    const ae=document.activeElement, fSid=ae&&ae.dataset?ae.dataset.note:null, fVal=fSid?ae.value:null, fPos=fSid?ae.selectionStart:null;
+    const list=$("a-list"); list.innerHTML="";
+    if(!state.staff.length){
+      const e=document.createElement("div"); e.className="empty"; e.textContent="No staff yet. Add names in Setup.";
+      const b=document.createElement("button"); b.type="button"; b.className="linkbtn"; b.textContent="Go to Setup"; b.onclick=()=>setView("setup");
+      e.appendChild(document.createElement("br")); e.appendChild(b); list.appendChild(e);
+    }
+    for(const s of state.staff){
+      const rec=day[s.id]||{};
+      const card=document.createElement("div"); card.className="staff";
+      const top=document.createElement("div"); top.className="staff-top";
+      const nm=document.createElement("div"); nm.className="staff-name"; nm.textContent=s.name;
+      const mk=document.createElement("div"); mk.className="mk";
+      for(const [k,lab,aria] of [["P","P","Present"],["H","½","Half day"],["A","A","Absent"]]){
+        const b=document.createElement("button"); b.type="button"; b.textContent=lab; b.setAttribute("aria-label",aria+" — "+s.name);
+        b.className=k+(rec.s===k?" on":""); b.setAttribute("aria-pressed",rec.s===k); b.onclick=()=>setMark(s.id,k); mk.appendChild(b);
+      }
+      top.append(nm,mk);
+      const inp=document.createElement("input"); inp.type="text"; inp.maxLength=120; inp.placeholder="Note (optional)";
+      inp.id="note-"+s.id; inp.dataset.note=s.id; inp.value=rec.n||"";
+      inp.addEventListener("change",()=>setNote(s.id,inp.value.trim()));
+      inp.addEventListener("keydown",e=>{ if(e.key==="Enter") inp.blur(); });
+      card.append(top,inp); list.appendChild(card);
+    }
+    if(fSid){ const i=document.getElementById("note-"+fSid); if(i){ i.value=fVal; i.focus(); try{i.setSelectionRange(fPos,fPos);}catch(e){} } }
+    renderAttMonth();
+  }
+
+  function attMonth(){
+    let f=$("a-from").value, t=$("a-to").value;
+    if(!f||!t){ const r=monthRange(state.date); f=f||r[0]; t=t||r[1]; }
+    if(f>t){ const x=f; f=t; t=x; }
+    const dates=Object.keys(state.att).filter(k=>k>=f && k<=t).sort();
+    const hasWage=state.staff.some(s=>Number(s.wage)>0);
+    const rows=state.staff.map(s=>{ let P=0,H=0,A=0; for(const k of dates){ const v=(state.att[k][s.id]||{}).s; if(v==="P")P++; else if(v==="H")H++; else if(v==="A")A++; } const days=P+H*0.5; return {s,P,H,A,days,sal:round(days*(Number(s.wage)||0))}; });
+    return {f,t,dates,rows,hasWage};
+  }
+  function renderAttMonth(){
+    if(!$("a-from").value||!$("a-to").value){ const r=monthRange(state.date); $("a-from").value=$("a-from").value||r[0]; $("a-to").value=$("a-to").value||r[1]; }
+    const {dates,rows,hasWage}=attMonth();
+    $("a-mhead").innerHTML=`<tr><th>Name</th><th>P</th><th>Half</th><th>A</th><th>Days</th>${hasWage?"<th>Salary</th>":""}</tr>`;
+    const body=$("a-mbody"); body.innerHTML="";
+    if(!rows.length){ body.innerHTML=`<tr><td colspan="${hasWage?6:5}" class="empty" style="text-align:center">Add staff in Setup to see the summary.</td></tr>`; }
+    for(const r of rows){
+      const tr=document.createElement("tr"); tr.className="rowbtn"+(state.attSel===r.s.id?" sel":"");
+      const tdN=document.createElement("td"); tdN.textContent=r.s.name; tr.appendChild(tdN);
+      tr.insertAdjacentHTML("beforeend",`<td class="num st-P">${r.P}</td><td class="num st-H">${r.H}</td><td class="num st-A">${r.A}</td><td class="num" style="font-weight:600">${r.days}</td>${hasWage?`<td class="num">${fmt(r.sal)}</td>`:""}`);
+      tr.onclick=()=>{ state.attSel = state.attSel===r.s.id ? null : r.s.id; renderAttMonth(); };
+      body.appendChild(tr);
+    }
+    const det=$("a-detail"); det.innerHTML="";
+    const sel=state.staff.find(s=>s.id===state.attSel); if(!sel) return;
+    const h=document.createElement("div"); h.className="sec"; h.textContent=sel.name+" · day by day"; det.appendChild(h);
+    const marked=dates.filter(k=>state.att[k][sel.id]);
+    if(!marked.length){ const e=document.createElement("div"); e.className="empty"; e.textContent="Nothing marked in this period."; det.appendChild(e); return; }
+    for(const k of marked){
+      const rec=state.att[k][sel.id]; const [y,m,d]=k.split("-").map(Number);
+      const row=document.createElement("div"); row.className="drow";
+      const a=document.createElement("div"); a.className="num"; a.textContent=new Date(y,m-1,d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",weekday:"short"});
+      const b=document.createElement("div"); b.className=rec.s?"st-"+rec.s:""; b.style.fontWeight="600"; b.textContent=rec.s?ST[rec.s]:"Not marked";
+      row.append(a,b);
+      if(rec.n){ const n=document.createElement("div"); n.className="n"; n.textContent=rec.n; row.appendChild(n); }
+      det.appendChild(row);
+    }
+  }
+  $("a-dl").onclick=async()=>{
+    const {f,t,dates,rows,hasWage}=attMonth();
+    if(!rows.length){ toast("Add staff first"); return; }
+    const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+    let csv="Name,Present,Half day,Absent,Days"+(hasWage?",Daily wage,Salary":"")+"\n";
+    csv+=rows.map(r=>[q(r.s.name),r.P,r.H,r.A,r.days].concat(hasWage?[Number(r.s.wage)||0,r.sal]:[]).join(",")).join("\n");
+    csv+="\n\nDate,Name,Status,Note\n";
+    for(const k of dates) for(const s of state.staff){ const rec=state.att[k][s.id]; if(rec) csv+=[k,q(s.name),rec.s?ST[rec.s]:"",q(rec.n)].join(",")+"\n"; }
+    try{ await saveFile(`attendance-${f}-to-${t}.csv`,csv); }
+    catch(err){ toast("Download cancelled"); }
+  };
+
+  // ---- Staff (Setup)
+  function renderStaff(){
+    const box=$("staff-list"); box.innerHTML="";
+    if(!state.staff.length){ const e=document.createElement("div"); e.className="note"; e.textContent="No staff added yet."; box.appendChild(e); return; }
+    for(const s of state.staff){
+      const r=document.createElement("div"); r.className="srow";
+      const n=document.createElement("div"); n.className="nm"; n.textContent=s.name;
+      const w=document.createElement("div"); w.className="num note"; w.textContent=Number(s.wage)>0?fmt(Number(s.wage))+"/day":"";
+      const x=document.createElement("button"); x.type="button"; x.className="x"; x.textContent="Remove";
+      x.onclick=()=>{ if(!x.dataset.armed){ x.dataset.armed="1"; x.textContent="Tap to confirm"; return; } saveStaff(state.staff.filter(z=>z.id!==s.id)); toast("Removed "+s.name); };
+      r.append(n,w,x); box.appendChild(r);
+    }
+  }
+  $("staff-form").addEventListener("submit",e=>{
+    e.preventDefault();
+    const name=$("s-name").value.trim(); if(!name){ $("s-name").focus(); toast("Enter a name"); return; }
+    const wage=round(parseFloat($("s-wage").value)||0);
+    saveStaff(state.staff.concat([{id:"s"+Date.now().toString(36)+Math.random().toString(36).slice(2,5), name, wage}]));
+    $("s-name").value=""; $("s-wage").value=""; $("s-name").focus(); toast("Added "+name);
+  });
+  function saveStaff(list){
+    state.staff=list; persist(); render();
+  }
+  function saveAtt(ds,day){
+    if(Object.keys(day).length) state.att[ds]=day; else delete state.att[ds];
+    persist();
+  }
+
+  // ---- Setup
+  function renderSetup(){
+    renderStaff();
+    if(document.activeElement!==$("c-start")) $("c-start").value = state.cfg.start || "";
+    if(document.activeElement!==$("c-cats")) $("c-cats").value = state.cfg.cats.join(", ");
+  }
+  $("setup").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const start=round(parseFloat($("c-start").value)||0);
+    let cats=$("c-cats").value.split(",").map(s=>s.trim()).filter(Boolean); if(!cats.length) cats=DEF_CATS.slice();
+    state.cfg={start,cats}; renderCats(); render();
+    if(persist()) toast("Setup saved");
+  });
+
+  // ---- Persistence
+  function saveDay(ds,arr){
+    state.days[ds]=arr; if(!arr.length) delete state.days[ds];
+    persist();
+  }
+
+  function render(){ renderCats(); if(state.view==="day") renderDay(); else if(state.view==="att") renderAtt(); else if(state.view==="report") renderReport(); else renderSetup(); }
+
+  render();
+
+  // ---- Phone storage
+  const KEY="cashbook-phone-v1";
+  const SEED={"days":{},"att":{},"staff":[],"cfg":{"start":0,"cats":["Factory","Home","Other"]}};
+  function persist(){
+    try{ localStorage.setItem(KEY,JSON.stringify({days:state.days,att:state.att,staff:state.staff,cfg:state.cfg,saved:Date.now()})); $("banner").hidden=true; return true; }
+    catch(e){ const b=$("banner"); b.hidden=false; b.textContent="This phone isn't letting the app save. Take a backup from Setup so nothing is lost."; return false; }
+  }
+  function applyData(d){
+    state.days = d.days && typeof d.days==="object" ? d.days : {};
+    state.att = d.att && typeof d.att==="object" ? d.att : {};
+    state.staff = Array.isArray(d.staff) ? d.staff : [];
+    const c=d.cfg||{}; state.cfg={start:Number(c.start)||0, cats:(Array.isArray(c.cats)&&c.cats.length)?c.cats.slice():DEF_CATS.slice()};
+  }
+  (function load(){
+    let raw=null; try{ raw=localStorage.getItem(KEY); }catch(e){}
+    let d=null; try{ d=raw?JSON.parse(raw):null; }catch(e){ d=null; }
+    applyData(d||SEED); if(!d) persist();
+    render();
+  })();
+
+  // ---- Backup & restore
+  $("b-save").onclick=async()=>{
+    const data=JSON.stringify({app:"cashbook",version:1,days:state.days,att:state.att,staff:state.staff,cfg:state.cfg,saved:new Date().toISOString()});
+    try{ await saveFile(`cashbook-backup-${todayStr()}.json`,data); toast("Backup saved"); }
+    catch(err){ toast("Backup cancelled"); }
+  };
+  let pending=null;
+  $("b-file").addEventListener("change",e=>{
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{ const d=JSON.parse(r.result); if(!d||typeof d.days!=="object"||!Array.isArray(d.staff)) throw 0;
+        pending=d; const n=Object.values(d.days).reduce((a,x)=>a+x.length,0);
+        $("b-info").textContent=`Backup has ${n} entries and ${d.staff.length} staff. This replaces everything in the app.`;
+        $("b-restore").hidden=false; }
+      catch(err){ pending=null; $("b-restore").hidden=true; $("b-info").textContent="That file isn't a Cash Book backup. Pick the .json file saved with Save backup."; }
+    };
+    r.readAsText(f); e.target.value="";
+  });
+  $("b-restore").onclick=()=>{
+    if(!pending) return;
+    applyData(pending); persist(); pending=null; $("b-restore").hidden=true; $("b-info").textContent=""; render(); toast("Backup restored");
+  };
+})();
+</script>
+
+</body></html>
